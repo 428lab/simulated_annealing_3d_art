@@ -68,6 +68,7 @@ def create_initial_cubes(num_cubes, image_size, cube_size, init_cubes=None):
     cubes = []
 
     if init_cubes == None:
+
         """ 初期の立方体の配置を生成 """
         for _ in range(num_cubes):
             x, y, z = [random.uniform(-5, 5) for _ in range(3)]
@@ -169,7 +170,7 @@ def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_s
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--target-img', required=True, type=str, help='target image to create by 3D graphics')
-    parser.add_argument('--init-cubes', type=str, help='specify initial cubes')
+    parser.add_argument('--init-cubes-file', type=str, help='specify initial cubes')
     parser.add_argument('--num-cubes', default=100, type=int, help='num of cubes in 3D space')
     parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
     parser.add_argument('--max-iter', default=10000, type=int, help='max iter for simirated annealing')
@@ -178,25 +179,30 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     print(opt)
 
-
-    init_cubes = opt.init_cubes
-    num_cubes = opt.num_cubes
-    cube_size = opt.cube_size
-
-    # シミュレーテッドアニーリングパラメータ
-    max_iter = opt.max_iter
-    start_temp = opt.start_temp
-    end_temp = opt.end_temp
-
-    print('init_cubes',init_cubes)
-
     # 目的のモノクロ画像を読み込み
     img = Image.open(opt.target_img).convert('L')
 
     img_size = (img.size)
 
+    init_cubes_file = opt.init_cubes_file
+    initial_cubes = []
+    if init_cubes_file == None:
+        num_cubes = opt.num_cubes
+        cube_size = opt.cube_size
+        initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
+    else:
+        with open(init_cubes_file, "rb") as fp:   # Unpickling
+            cubes = pickle.load(fp)
+        num_cubes = len(cubes)
+        cube_size = opt.cube_size
+        initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size, init_cubes=cubes)
+    print('initial_cubes',initial_cubes)
+    print('len(initial_cubes)',len(initial_cubes))
 
-    initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
+    # シミュレーテッドアニーリングパラメータ
+    max_iter = opt.max_iter
+    start_temp = opt.start_temp
+    end_temp = opt.end_temp
 
     final_cubes = simulated_annealing(initial_cubes, img, max_iter, start_temp, end_temp, img_size, cube_size)
 

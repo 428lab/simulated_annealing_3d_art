@@ -178,7 +178,6 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     print(opt)
 
-    target_img = opt.target_img
 
     init_cubes = opt.init_cubes
     num_cubes = opt.num_cubes
@@ -192,23 +191,23 @@ if __name__ == "__main__":
     print('init_cubes',init_cubes)
 
     # 目的のモノクロ画像を読み込み
-    target_img = Image.open(target_img).convert('L')
+    img = Image.open(opt.target_img).convert('L')
 
-    img_size = (target_img.size)
+    img_size = (img.size)
 
 
     initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
 
-    final_cubes = simulated_annealing(initial_cubes, target_img, max_iter, start_temp, end_temp, img_size, cube_size)
+    final_cubes = simulated_annealing(initial_cubes, img, max_iter, start_temp, end_temp, img_size, cube_size)
 
     # 最終的な画像を生成して保存
     final_img = generate_image(final_cubes, img_size, cube_size)
-    basename = os.path.split(os.path.basename(target_img))[0] 
-    final_img.save(basename + '.png')
+    basename = os.path.splitext(os.path.basename(opt.target_img))[0]
+    final_img.save(basename + '_result.png')
 
-    with open(basename + ".pkl", "wb") as fp:   #Pickling
+    with open(basename + "_cubes.pkl", "wb") as fp:   #Pickling
         pickle.dump(final_cubes, fp)
-    with open(basename + ".pkl", "rb") as fp:   # Unpickling
+    with open(basename + "_cubes.pkl", "rb") as fp:   # Unpickling
         b = pickle.load(fp)
     print(b==final_cubes)
 

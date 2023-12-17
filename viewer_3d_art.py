@@ -11,6 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import pickle
+import argparse
 
 # Cube vertices and surfaces
 vertices = (
@@ -86,23 +87,31 @@ def rendering_image(current_cubes, img_size, cube_size):
 
     return 
 
-# 初期配置を生成
-img_size = (128, 128)
-cube_size= 0.2
 
-pygame.init()
-display = (img_size[0], img_size[1])
-pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cubes-file', type=str, help='specify cubes files')
+    parser.add_argument('--img-size', default=128, type=int, help='num of cubes in 3D space')
+    parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
+    opt = parser.parse_args()
+    print(opt)
 
-glClearColor(1.0, 1.0, 1.0, 1.0)  # 白色に設定
-glEnable(GL_DEPTH_TEST)
+    cubes_file = opt.cubes_file
+    img_size = (opt.img_size, opt.img_size)
+    cube_size = opt.cube_size
 
-# ここでビューポートと投影を設定
-setup_viewport(display[0], display[1])
+    pygame.init()
+    display = (img_size[0], img_size[1])
+    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
-with open("final_cubes.pkl", "rb") as fp:   # Unpickling
-    final_cubes =  pickle.load(fp)
+    glClearColor(1.0, 1.0, 1.0, 1.0)  # 白色に設定
+    glEnable(GL_DEPTH_TEST)
 
-# 最終的な画像を生成して保存
-final_img = rendering_image(final_cubes, img_size, cube_size)
-final_img.show()
+    # ここでビューポートと投影を設定
+    setup_viewport(display[0], display[1])
+
+    with open(cubes_file, "rb") as fp:   # Unpickling
+        final_cubes =  pickle.load(fp)
+
+    # 画像をレンダリング
+    rendering_image(final_cubes, img_size, cube_size)

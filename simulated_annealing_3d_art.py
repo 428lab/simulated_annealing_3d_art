@@ -12,6 +12,8 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import pickle
 
+import argparse
+
 # Cube vertices and surfaces
 vertices = (
     (1, -1, -1),
@@ -52,7 +54,7 @@ def draw_cube(size):
     glEnd()
 
 
-def create_initial_cubes(num_cubes, image_size, cube_size):
+def create_initial_cubes(num_cubes, image_size, cube_size, init_cubes=None):
     pygame.init()
     display = (image_size[0], image_size[1])
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
@@ -63,13 +65,17 @@ def create_initial_cubes(num_cubes, image_size, cube_size):
     # ここでビューポートと投影を設定
     setup_viewport(display[0], display[1])
 
-
-    """ 初期の立方体の配置を生成 """
     cubes = []
-    for _ in range(num_cubes):
-        x, y, z = [random.uniform(-5, 5) for _ in range(3)]
-        angle = random.uniform(0, 45)
-        cubes.append((x, y, z, angle))
+
+    if init_cubes == None:
+        """ 初期の立方体の配置を生成 """
+        for _ in range(num_cubes):
+            x, y, z = [random.uniform(-5, 5) for _ in range(3)]
+            angle = random.uniform(0, 45)
+            cubes.append((x, y, z, angle))
+    else:
+        for x, y, z, angle in init_cubes:
+            cubes.append((x, y, z, angle))
 
     return cubes
 
@@ -104,7 +110,9 @@ def generate_image(current_cubes, img_size, cube_size):
         draw_cube(cube_size)  # 立方体を描画
         glPopMatrix()
 
+    #glFinish()  # レンダリングが完了するまで待機
     pygame.display.flip()
+
     # OpenGLのフレームバッファからビットマップを取得
     bitmap = grab_opengl_bitmap(img_size)
 
@@ -144,6 +152,8 @@ def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_s
 
         if i % 1000 == 0:
             print('new_error',i,new_error)
+            #cv2.imshow('rendering',np.array(new_img, dtype=np.uint8))
+            #cv2.waitKey(1)
 
         # エラーが減少するか、確率で更新を受理
         if new_error < current_error or random.random() < math.exp((current_error - new_error) / temp):
@@ -156,27 +166,49 @@ def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_s
     return current_cubes
 
 
-# 目的のモノクロ画像を読み込み
-target_img = Image.open('love.bmp').convert('L')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--target-img', required=True, type=str, help='target image to create by 3D graphics')
+    parser.add_argument('--init-cubes', type=str, help='specify initial cubes')
+    parser.add_argument('--num-cubes', default=100, type=int, help='num of cubes in 3D space')
+    parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
+    parser.add_argument('--max-iter', default=10000, type=int, help='max iter for simirated annealing')
+    parser.add_argument('--start-temp', default=10.0, type=float, help='start temperature for simirated annealing')
+    parser.add_argument('--end-temp', default=0.1, type=float, help='end temperature for simirated annealing')
+    opt = parser.parse_args()
+    print(opt)
 
-# 初期配置を生成
-num_cubes = 100
-img_size = (128, 128)
-cube_size= 0.2
-initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
+    target_img = opt.target_img
 
-# シミュレーテッドアニーリングを実行
-max_iter = 20000
-start_temp = 10.0
-end_temp = 0.1
-final_cubes = simulated_annealing(initial_cubes, target_img, max_iter, start_temp, end_temp, img_size, cube_size)
+    init_cubes = opt.init_cubes
+    num_cubes = opt.num_cubes
+    cube_size = opt.cube_size
 
-# 最終的な画像を生成して保存
-final_img = generate_image(final_cubes, img_size, cube_size)
-final_img.save('final_image.png')
+    # シミュレーテッドアニーリングパラメータ
+    max_iter = opt.max_iter
+    start_temp = opt.start_temp
+    end_temp = opt.end_temp
 
-with open("final_cubes.pkl", "wb") as fp:   #Pickling
-    pickle.dump(final_cubes, fp)
-with open("final_cubes.pkl", "rb") as fp:   # Unpickling
-    b = pickle.load(fp)
-print(b==final_cubes)
+    print('init_cubes',init_cubes)
+
+    # 目的のモノクロ画像を読み込み
+    target_img = Image.open(target_img).convert('L')
+
+    img_size = (target_img.size)
+
+
+    initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
+
+    final_cubes = simulated_annealing(initial_cubes, target_img, max_iter, start_temp, end_temp, img_size, cube_size)
+
+    # 最終的な画像を生成して保存
+    final_img = generate_image(final_cubes, img_size, cube_size)
+    basename = os.path.split(os.path.basename(target_img))[0] 
+    final_img.save(basename + '.png')
+
+    with open(basename + ".pkl", "wb") as fp:   #Pickling
+        pickle.dump(final_cubes, fp)
+    with open(basename + ".pkl", "rb") as fp:   # Unpickling
+        b = pickle.load(fp)
+    print(b==final_cubes)
+

@@ -54,7 +54,7 @@ def draw_cube(size):
     glEnd()
 
 
-def create_initial_cubes(num_cubes, image_size, cube_size, init_cubes=None):
+def create_initial_cubes(num_cubes, image_size, init_cubes=None):
     pygame.init()
     display = (image_size[0], image_size[1])
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
@@ -73,10 +73,11 @@ def create_initial_cubes(num_cubes, image_size, cube_size, init_cubes=None):
         for _ in range(num_cubes):
             x, y, z = [random.uniform(-5, 5) for _ in range(3)]
             angle = random.uniform(0, 45)
-            cubes.append((x, y, z, angle))
+            size = random.uniform(0.1, 0.5)
+            cubes.append((x, y, z, angle, size))
     else:
-        for x, y, z, angle in init_cubes:
-            cubes.append((x, y, z, angle))
+        for x, y, z, angle, size in init_cubes:
+            cubes.append((x, y, z, angle, size))
 
     return cubes
 
@@ -101,14 +102,14 @@ def grab_opengl_bitmap(img_size):
 def numpy_to_pillow_image(np_image):
     return Image.fromarray(np.flip(np_image, axis=0), 'RGBA')
 
-def generate_image(current_cubes, img_size, cube_size):
+def generate_image(current_cubes, img_size):
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    for x, y, z, angle in current_cubes:
+    for x, y, z, angle, size in current_cubes:
         glPushMatrix()
         glTranslatef(x, y, z)
         glRotatef(angle, 0, 1, 0)
-        draw_cube(cube_size)  # 立方体を描画
+        draw_cube(size)  # 立方体を描画
         glPopMatrix()
 
     #glFinish()  # レンダリングが完了するまで待機
@@ -130,11 +131,11 @@ def calculate_error(target_img, generated_img):
     rmse = np.sqrt(mse)
     return rmse
 
-def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_size, cube_size):
+def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_size):
     """ シミュレーテッドアニーリングのメインループ """
     temp = start_temp
     current_cubes = cubes
-    current_img = generate_image(current_cubes, img_size, cube_size)
+    current_img = generate_image(current_cubes, img_size)
     current_error = calculate_error(target_img, current_img)
 
     for i in range(max_iter):
@@ -145,10 +146,11 @@ def simulated_annealing(cubes, target_img, max_iter, start_temp, end_temp, img_s
             random.uniform(-5, 5),
             random.uniform(-5, 5),
             random.uniform(-5, 5),
-            random.uniform(0, 45)
+            random.uniform(0, 45),
+            random.uniform(0.1, 0.5)
         )
 
-        new_img = generate_image(new_cubes, img_size, cube_size)
+        new_img = generate_image(new_cubes, img_size)
         new_error = calculate_error(target_img, new_img)
 
         if i % 1000 == 0:
@@ -172,8 +174,8 @@ if __name__ == "__main__":
     parser.add_argument('--target-img', required=True, type=str, help='target image to create by 3D graphics')
     parser.add_argument('--init-cubes-file', type=str, help='specify initial cubes')
     parser.add_argument('--num-cubes', default=100, type=int, help='num of cubes in 3D space')
-    parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
-    parser.add_argument('--max-iter', default=10000, type=int, help='max iter for simirated annealing')
+    #parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
+    parser.add_argument('--max-iter', default=20000, type=int, help='max iter for simirated annealing')
     parser.add_argument('--start-temp', default=10.0, type=float, help='start temperature for simirated annealing')
     parser.add_argument('--end-temp', default=0.1, type=float, help='end temperature for simirated annealing')
     opt = parser.parse_args()
@@ -188,14 +190,14 @@ if __name__ == "__main__":
     initial_cubes = []
     if init_cubes_file == None:
         num_cubes = opt.num_cubes
-        cube_size = opt.cube_size
-        initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size)
+        #cube_size = opt.cube_size
+        initial_cubes = create_initial_cubes(num_cubes, img_size)
     else:
         with open(init_cubes_file, "rb") as fp:   # Unpickling
             cubes = pickle.load(fp)
         num_cubes = len(cubes)
-        cube_size = opt.cube_size
-        initial_cubes = create_initial_cubes(num_cubes, img_size, cube_size, init_cubes=cubes)
+        #cube_size = opt.cube_size
+        initial_cubes = create_initial_cubes(num_cubes, img_size, init_cubes=cubes)
     print('initial_cubes',initial_cubes)
     print('len(initial_cubes)',len(initial_cubes))
 
@@ -204,10 +206,10 @@ if __name__ == "__main__":
     start_temp = opt.start_temp
     end_temp = opt.end_temp
 
-    final_cubes = simulated_annealing(initial_cubes, img, max_iter, start_temp, end_temp, img_size, cube_size)
+    final_cubes = simulated_annealing(initial_cubes, img, max_iter, start_temp, end_temp, img_size)
 
     # 最終的な画像を生成して保存
-    final_img = generate_image(final_cubes, img_size, cube_size)
+    final_img = generate_image(final_cubes, img_size)
     basename = os.path.splitext(os.path.basename(opt.target_img))[0]
     final_img.save(basename + '_result.png')
 

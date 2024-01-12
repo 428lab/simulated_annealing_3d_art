@@ -53,7 +53,7 @@ def draw_cube(size):
     glEnd()
 
 
-def rendering_image(current_cubes, img_size, cube_size):
+def rendering_image(current_cubes, img_size):
     cnt = 40
     # メインループ
     while True:
@@ -69,13 +69,13 @@ def rendering_image(current_cubes, img_size, cube_size):
         glRotatef(cnt, 1, 1, 1)  # X軸を中心に回転
 
 
-        for x, y, z, angle in current_cubes:
+        for x, y, z, angle, size in current_cubes:
             glPushMatrix()
             glTranslatef(x, y, z)
             glRotatef(angle, 0, 1, 0)
             #glRotatef(cnt, 1, 0, 0)  # X軸を中心に回転
 
-            draw_cube(cube_size)  # 立方体を描画
+            draw_cube(size)  # 立方体を描画
             glPopMatrix()
         cnt += 1
 
@@ -92,13 +92,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--cubes-file', type=str, help='specify cubes files')
     parser.add_argument('--img-size', default=128, type=int, help='num of cubes in 3D space')
-    parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
+    #parser.add_argument('--cube-size', default=0.2, type=float, help='num of cubes in 3D space')
     opt = parser.parse_args()
     print(opt)
 
     cubes_file = opt.cubes_file
     img_size = (opt.img_size, opt.img_size)
-    cube_size = opt.cube_size
+    #cube_size = opt.cube_size
 
     pygame.init()
     display = (img_size[0], img_size[1])
@@ -114,4 +114,4 @@ if __name__ == "__main__":
         final_cubes =  pickle.load(fp)
 
     # 画像をレンダリング
-    rendering_image(final_cubes, img_size, cube_size)
+    rendering_image(final_cubes, img_size)
